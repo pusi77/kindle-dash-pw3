@@ -1,22 +1,24 @@
-#!/usr/bin/env sh
+#!/bin/sh
+# shellcheck disable=SC2034  # variables are used by dash.sh, which sources this file
+# Dashboard settings. Plain KEY=value, sourced by dash.sh (no jq/python on the device for JSON).
+# Edit over SSH or via USB, takes effect at the next "Start Dashboard".
 
-# Export environment variables here
-export WIFI_TEST_IP=${WIFI_TEST_IP:-1.1.1.1}
-export REFRESH_SCHEDULE=${REFRESH_SCHEDULE:-"2,32 8-17 * * MON-FRI"}
-export TIMEZONE=${TIMEZONE:-"Europe/Amsterdam"}
+# https URL, or a local path for offline testing (Wi-Fi still cycles, so battery stats stay realistic)
+DASH_URL="/mnt/us/dashboard/test.png"
 
-# By default, partial screen updates are used to update the screen,
-# to prevent the screen from flashing. After a few partial updates,
-# the screen will start to look a bit distorted (due to e-ink ghosting).
-# This number determines when a full refresh is triggered. By default it's
-# triggered after 4 partial updates.
-export FULL_DISPLAY_REFRESH_RATE=${FULL_DISPLAY_REFRESH_RATE:-4}
+# Refresh every N minutes. Must divide 60 (1,2,3,4,5,6,10,12,15,20,30) or be 60 (on the hour).
+INTERVAL_MINUTES=15
 
-# When the time until the next wakeup is greater or equal to this number,
-# the dashboard will not be refreshed anymore, but instead show a
-# 'kindle is sleeping' screen. This can be useful if your schedule only runs
-# during the day, for example.
-export SLEEP_SCREEN_INTERVAL=3600
+# Hours (local time, 0-23, cron syntax) when the dashboard refreshes. Outside them it shows
+# sleeping.png and suspends in one go until the next active hour.
+# "7-22" = refreshes from 07:00 to 22:45. Wrapping past midnight: "0-1,7-23".
+ACTIVE_HOURS="7-22"
 
-export LOW_BATTERY_REPORTING=${LOW_BATTERY_REPORTING:-false}
-export LOW_BATTERY_THRESHOLD_PERCENT=10
+# Timezone for ACTIVE_HOURS (the device clock itself stays UTC).
+TIMEZONE="Europe/Rome"
+
+# Advanced: a full cron expression overrides INTERVAL_MINUTES/ACTIVE_HOURS, e.g. "*/30 7-22 * * MON-FRI".
+#REFRESH_SCHEDULE="*/15 7-22 * * *"
+
+# Partial refreshes ghost over time; full (flashing) refresh every N updates.
+FULL_DISPLAY_REFRESH_RATE=4

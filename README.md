@@ -1,58 +1,99 @@
-# Low-power Kindle dashboard
+# kindle-dash-pw3
 
-Turns out old Kindle devices make great, energy efficient dashboards :-)
+A low-power, wall-mounted e-ink dashboard for the **Kindle Paperwhite 3** on a modern
+(KindleModding / Universal Hotfix) jailbreak. Fork of
+[pascalw/kindle-dash](https://github.com/pascalw/kindle-dash), ported and hardened for this device.
 
-![](./example/photo.jpg)
+The Kindle wakes up on a schedule via the RTC alarm, turns Wi-Fi on, gets a PNG, draws it, turns
+Wi-Fi off and suspends to RAM again. It does **not** render anything itself. The image can come from:
 
-## What this repo is
+- a **file on the Kindle**,
+- any **web server**, e.g. a self-hosted one on your LAN (plain HTTP is fine),
+- or **anything else** you script in `local/fetch-dashboard.sh`.
 
-This repo only contains the code that runs on the Kindle. It periodically fetches an image to be displayed on the screen and suspends the device to RAM (which is very power efficient) until the next screen update.
+See [IMAGE-SOURCES.md](./IMAGE-SOURCES.md) for the options and the image format (1072x1448, 8-bit grey).
 
-This code _does not_ render the dashboard itself. It's expected that what to display on the screen is rendered elsewhere and can be fetchd via HTTP(s). This is both more power efficient and allows you to use any tool you like to produce the dashboard image.
+## Tested on
 
-In my case I use a [dashbling](https://github.com/pascalw/dashbling) dashboard that I render into a PNG screenshot on a server. See [here](https://github.com/pascalw/kindle-dash/blob/main/docs/tipstricks.md#producing-dashboard-images-from-a-webpage) for information on how these PNGs should be produced, including some sample code.
+| | |
+|---|---|
+| Device | Kindle Paperwhite 3 (2015, Wi-Fi, "Muscat on Wario", i.MX6 SoloLite), 1072x1448, 300 ppi, 16 greys |
+| Firmware | 5.11.1.1 (armel userland) |
+| Jailbreak | KindleModding Universal Hotfix + KPM + scriptlets. **No KUAL, MRPI or USBNetwork needed.** |
+| Access | SSH via KOReader's built-in SSH server (dropbear, port 2222) |
 
-## Prerequisites
+Other Kindles may work by changing `RTC` and `BACKLIGHT` at the top of `src/dash.sh`, but only the
+PW3 has been tested.
 
-* A jailbroken Kindle, with Wi-Fi configured.
-* An SSH server on the Kindle (via [USBNetwork](https://wiki.mobileread.com/wiki/USBNetwork))
-* Tested only on a Kindle 4 NT. Should work on other Kindle devices as well with minor modifications.
+## What changed compared to upstream
 
-## Installation
+- `stop framework` / `start framework` (upstart) instead of `/etc/init.d/framework`, which doesn't exist on 5.x.
+- RTC wake via `/sys/class/rtc/rtc1/wakealarm`: absolute epoch, cleared before every write, and
+  **never suspends unless the alarm reads back as set**.
+- Wi-Fi is switched **off** while suspended and back on at wake-up, then waits for `wifid cmState = CONNECTED`.
+- Frontlight **really** off: `flIntensity 0` still leaves the LED at 1/4095, so the driver is also set to 0 at every wake.
+- Clean exit: a `STOP` file (checked at every wake) or `SIGTERM` restores everything and restarts the stock UI.
+- Doesn't suspend while on USB/charging (keeps refreshing with Wi-Fi on), so plugging in is the "maintenance mode".
+- Schedule as simple settings: interval in minutes + active hours + timezone, with a sleep screen at night.
+- Uses the system `curl` (TLS 1.2 with certificate checks) instead of a bundled `xh`; sends `X-Kindle-Battery`.
+- Starts from the Kindle library through scriptlets, with no KUAL.
+- One line per refresh in `battery.log` (timestamp, battery %, fetch result, seconds with Wi-Fi on).
+- Native 1072x1448 sleep screen and test card.
 
-1. Download the [latest release](https://github.com/pascalw/kindle-dash/releases) on your computer and extract it.
-2. Modify `local/fetch-dashboard.sh` and optionally `local/env.sh`.
-3. Copy the files to the Kindle, for example: `rsync -vr ./ kindle:/mnt/us/dashboard`.
-4. Start dashboard with `/mnt/us/dashboard/start.sh`.  
-   Note that the device will go into suspend about 10-15 seconds after you start the dashboard.
+## Install
 
-## Upgrading
+Prerequisites: jailbroken PW3 with Wi-Fi configured, KOReader with its SSH server enabled and your
+SSH key installed.
 
-If you're running kindle-dash already and want to update to the latest version follow the following steps.
+```sh
+make dist                      # fetches upstream's prebuilt static next-wakeup, copies src/ to dist/
+make deploy KINDLE=<kindle-ip>   # copies dist/ to /mnt/us/dashboard (keeps an existing local/env.sh)
+                               # and the scriptlets to /mnt/us/documents
+```
 
-1. Download the [latest release](https://github.com/pascalw/kindle-dash/releases) on your computer and extract it.
-2. Review the release notes. Some releases might require changes to files in `local/`.
-3. Copy the files to the Kindle, excluding the `local` directory. For example: `rsync -vur --exclude=local ./ kindle:/mnt/us/dashboard`.
-4. Modify files in `/mnt/us/dashboard/local` if applicable.
-5. Start dashboard with `/mnt/us/dashboard/start.sh`.  
-   Note that the device will go into suspend about 10-15 seconds after you start the dashboard.
-   
-## KUAL
+No SSH? Copy `dist/` to `dashboard/` and `scriptlets/*` to `documents/` on the Kindle's USB drive.
 
-If you're using KUAL you can use simple extension to start this Dashboard
+Two "books" appear in the library:
 
-1. Copy folder `kindle-dash` from `KUAL` folder to the kual `extensions` folder. (located in `/mnt/us/extensions`)
+- **Dashboard Test**: one fetch and draw, no suspend, stock UI keeps running. Log: `logs/test.log`.
+- **Start Dashboard**: starts the loop, fully detached. Log: `logs/dash.log`.
 
-## How this works
+Exit KOReader and unplug USB before tapping **Start Dashboard**.
 
-* This code periodically downloads a dashboard image from an HTTP(s) endpoint.
-* The interval can be configured in `dist/local/env.sh` using a cron expression.
-* During the update intervals the device is suspended to RAM to save power.
+## Configure
 
-## Notes
+Edit `/mnt/us/dashboard/local/env.sh`. It takes effect at the next start.
 
-* The releases contain a pre-compiled binary of the [ht](https://github.com/ducaale/ht) command-line HTTP client. This fully supports modern HTTPS crypto, wheras the built-in `curl` and `wget` commands don't (because they rely on a very old `openssl` library).
+```sh
+DASH_URL="http://192.168.1.10/dash.png"  # web server, or a local path: /mnt/us/dashboard/my.png
+INTERVAL_MINUTES=15        # must divide 60, or be 60
+ACTIVE_HOURS="7-22"        # local hours that refresh (cron hour field); outside: sleep screen until morning
+TIMEZONE="Europe/Rome"     # the device clock stays UTC
+#REFRESH_SCHEDULE="*/30 7-22 * * MON-FRI"   # full cron override
+```
+
+## Stop / recover
+
+- **Stop:** plug in USB (it stays awake with Wi-Fi on within one interval), then
+  `ssh -p 2222 root@KINDLE sh /mnt/us/dashboard/stop.sh`. The stock UI comes back.
+- **Recover from anything:** hold the power button ~40 s. Nothing autostarts at boot, so the
+  device comes back to the normal UI.
+
+## Gotchas found along the way
+
+- On this jailbreak any `.sh` in `documents/` runs as root when tapped. Without `# DontUseFBInk` the
+  launcher clears the screen and prints the script's output over your image.
+- Deleting a scriptlet doesn't always remove it from the library; tapping the leftover gives a blank
+  screen. `lipc-set-prop com.lab126.appmgrd start app://com.lab126.booklet.home` brings back the home screen.
+- Never create `/mnt/us/DONT_START_FRAMEWORK`: the stock UI won't come up after a reboot.
+- The Kindle firewall drops ICMP: ping says nothing about whether it's awake.
+- The stock screensaver kicks in after ~10 min idle and turns Wi-Fi off, dropping SSH.
+- `curl` on this firmware has no `file://` support; busybox `wget` doesn't verify certificates.
+- `pgrep -f` over SSH matches the SSH command itself. Use the pid file.
 
 ## Credits
 
-Thanks to [davidhampgonsalves/life-dashboard](https://github.com/davidhampgonsalves/life-dashboard) for the inspiration!
+- [pascalw/kindle-dash](https://github.com/pascalw/kindle-dash) (MIT), which this is forked from,
+  including the `next-wakeup` scheduler.
+- [davidhampgonsalves/life-dashboard](https://github.com/davidhampgonsalves/life-dashboard) for the original idea.
+- [KindleModding](https://kindlemodding.org/) for the jailbreak, KPM and scriptlets.
