@@ -51,7 +51,9 @@ make deploy KINDLE=<kindle-ip>   # copies dist/ to /mnt/us/dashboard (keeps an e
                                # and the scriptlets to /mnt/us/documents
 ```
 
-No SSH? Copy `dist/` to `dashboard/` and `scriptlets/*` to `documents/` on the Kindle's USB drive.
+No SSH? Download the [latest release](https://github.com/pusi77/kindle-dash-pw3/releases) and
+extract it at the root of the Kindle's USB drive: it contains `dashboard/` and `documents/`.
+When upgrading this way, keep your `dashboard/local/env.sh`.
 
 Two "books" appear in the library:
 

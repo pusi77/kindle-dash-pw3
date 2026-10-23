@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [pw3-v0.1.0] - Kindle Paperwhite 3 fork
+## [pw3-v0.1.0] - 2026-10-23
 
 Fork for the Kindle Paperwhite 3 on firmware 5.11.1.1 with the KindleModding Universal Hotfix jailbreak.
 

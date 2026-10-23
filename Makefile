@@ -12,8 +12,9 @@ SSH := ssh -p 2222 root@$(KINDLE)
 
 dist: dist/next-wakeup ${TARGET_FILES}
 
+# Laid out like the Kindle's USB drive: extract at its root (dashboard/ + documents/).
 tarball: dist
-	tar -C dist -cvzf kindle-dash-pw3-${VERSION}.tgz ./
+	tar -czvf kindle-dash-${VERSION}.tgz --transform 's,^dist,dashboard,;s,^scriptlets,documents,' dist scriptlets
 
 dist/%: src/%
 	@echo "Copying $<"
