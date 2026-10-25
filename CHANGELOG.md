@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional `DASH_TOKEN` in `local/env.sh`: sent as `Authorization: Bearer <token>`, through curl's
+  stdin so it never appears in `ps` or logs. No token, no header: unchanged behaviour.
+
+### Fixed
+- `DEBUG=true` no longer traces the `local/env.sh` assignments into `dash.log`.
+
 ## [pw3-v0.1.0] - 2026-10-23
 
 Fork for the Kindle Paperwhite 3 on firmware 5.11.1.1 with the KindleModding Universal Hotfix jailbreak.

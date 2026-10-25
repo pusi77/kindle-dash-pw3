@@ -6,6 +6,10 @@
 # https URL, or a local path for offline testing (Wi-Fi still cycles, so battery stats stay realistic)
 DASH_URL="/mnt/us/dashboard/test.png"
 
+# Optional: sent as "Authorization: Bearer <token>" when DASH_URL is http(s). Leave unset if the
+# server needs no token.
+#DASH_TOKEN=""
+
 # Refresh every N minutes. Must divide 60 (1,2,3,4,5,6,10,12,15,20,30) or be 60 (on the hour).
 INTERVAL_MINUTES=15
 

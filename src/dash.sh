@@ -2,9 +2,6 @@
 # Adapted from pascalw/kindle-dash v1.0.0-beta.4 for Kindle PW3 / FW 5.11.1.1.
 # Usage: dash.sh        -> daemon loop (stops framework, suspends via RTC)
 #        dash.sh once   -> single fetch + draw, no framework stop, no suspend, Wi-Fi left as is
-DEBUG=${DEBUG:-false}
-[ "$DEBUG" = true ] && set -x
-
 DIR="$(cd "$(dirname "$0")" && pwd)"
 DASH_PNG="$DIR/dash.png"
 FETCH_DASHBOARD_CMD="$DIR/local/fetch-dashboard.sh"
@@ -16,6 +13,10 @@ set -a
 # shellcheck source=/dev/null  # user config, path only known at runtime
 [ -f "$DIR/local/env.sh" ] && . "$DIR/local/env.sh"
 set +a
+
+# Trace only after env.sh: its assignments (DASH_TOKEN) must not end up in the log.
+DEBUG=${DEBUG:-false}
+[ "$DEBUG" = true ] && set -x
 
 INTERVAL_MINUTES=${INTERVAL_MINUTES:-5}
 ACTIVE_HOURS=${ACTIVE_HOURS:-*}

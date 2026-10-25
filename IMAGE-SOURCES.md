@@ -32,7 +32,19 @@ The request:
 ```
 GET <DASH_URL>
 X-Kindle-Battery: 84          # battery level 0-100, use it or ignore it
+Authorization: Bearer <token> # only if DASH_TOKEN is set in local/env.sh
 ```
+
+For a server on the internet, set a token so only your Kindle gets the image:
+
+```sh
+DASH_URL="https://dash.example.org/dash.png"
+DASH_TOKEN="a-long-random-string"   # e.g. openssl rand -hex 32
+```
+
+The server compares it (in constant time) and answers anything but `200` to a wrong token: the
+Kindle then keeps the previous image. The token is never written to the logs, also with `DEBUG=true`.
+Over plain HTTP the token travels in clear text, so use it with HTTPS.
 
 | Response | Effect |
 |---|---|
