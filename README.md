@@ -40,6 +40,24 @@ PW3 has been tested.
 - One line per refresh in `battery.log` (timestamp, battery %, fetch result, seconds with Wi-Fi on).
 - Native 1072x1448 sleep screen and test card.
 
+## Battery life
+
+Measured on the test PW3 (original battery) over 51.5 h
+
+| | |
+|---|---|
+| Schedule | every 15 min, 07:00-22:45 local time (`INTERVAL_MINUTES=15`, `ACTIVE_HOURS="7-22"`) |
+| Refreshes | 139, 0 failed fetches |
+| Battery | 84% → 78%: **~2.8% per day** |
+| Projection | **~5 weeks per charge** (30-43 days; the gauge reports whole percent only) |
+| Night (sleep screen, one suspend) | 0-1% per night |
+| Wi-Fi on per refresh | 29 s average (13-38 s): ~18 s to reconnect + ~1 s fetch + 10 s abort window |
+
+The image came from a local file, so the fetch was near-instant; a remote server adds its response
+time to the Wi-Fi time. Wi-Fi time is the main cost: fewer refreshes or a shorter `ACTIVE_HOURS`
+window extend battery life roughly proportionally. Check your own numbers in
+`/mnt/us/dashboard/battery.log` (one line per refresh).
+
 ## Install
 
 Prerequisites: jailbroken PW3 with Wi-Fi configured, KOReader with its SSH server enabled and your
@@ -76,12 +94,16 @@ TIMEZONE="Europe/Rome"     # the device clock stays UTC
 
 ## Stop / recover
 
-- **Stop:** plug in USB (it stays awake with Wi-Fi on within one interval), then
+- **Stop:** plug into a **wall charger** (it stays awake with Wi-Fi on within one interval), then
   `ssh -p 2222 root@KINDLE sh /mnt/us/dashboard/stop.sh`. The stock UI comes back.
 - **Recover from anything:** hold the power button ~40 s. Nothing autostarts at boot, so the
   device comes back to the normal UI.
 
 ## Gotchas found along the way
+
+- Plugging into a **computer** switches the Kindle to USB Drive Mode, which unmounts `/mnt/us` (where
+  the dashboard runs from) and kills the loop. Use a wall charger to stop it. A computer is still handy
+  to read `dashboard/battery.log` and `dashboard/logs/` without SSH.
 
 - On this jailbreak any `.sh` in `documents/` runs as root when tapped. Without `# DontUseFBInk` the
   launcher clears the screen and prints the script's output over your image.
