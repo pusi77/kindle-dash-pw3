@@ -6,12 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [pw3-v0.2.0] - 2026-10-25
+
 ### Added
 - Optional `DASH_TOKEN` in `local/env.sh`: sent as `Authorization: Bearer <token>`, through curl's
   stdin so it never appears in `ps` or logs. No token, no header: unchanged behaviour.
 
 ### Fixed
 - `DEBUG=true` no longer traces the `local/env.sh` assignments into `dash.log`.
+
+### Documentation
+- Measured battery life (~5 weeks per charge at a 15-minute refresh); stop the dashboard with a
+  wall charger, since a computer switches the Kindle to USB Drive Mode.
 
 ## [pw3-v0.1.0] - 2026-10-23
 

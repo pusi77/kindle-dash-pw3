@@ -1,4 +1,4 @@
-VERSION := pw3-v0.1.0
+VERSION := pw3-v0.2.0
 SRC_FILES := $(shell find src -path src/next-wakeup -prune -o \( -name '*.sh' -o -name '*.png' \) -print)
 NEXT_WAKEUP_SRC_FILES := $(shell find src/next-wakeup/src -name '*.rs')
 TARGET_FILES := $(SRC_FILES:src/%=dist/%)
