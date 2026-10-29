@@ -90,7 +90,11 @@ INTERVAL_MINUTES=15        # must divide 60, or be 60
 ACTIVE_HOURS="7-22"        # local hours that refresh (cron hour field); outside: sleep screen until morning
 TIMEZONE="Europe/Rome"     # the device clock stays UTC
 #REFRESH_SCHEDULE="*/30 7-22 * * MON-FRI"   # full cron override
+#ROTATE=180                # Kindle mounted upside down: rotates dashboard, test card and sleep screen
 ```
+
+`ROTATE=180` turns the framebuffer (`/sys/class/graphics/fb0/rotate`) upside down while the
+dashboard draws, so it works with any image source; the stock UI comes back upright on stop.
 
 ## Stop / recover
 
@@ -114,6 +118,8 @@ TIMEZONE="Europe/Rome"     # the device clock stays UTC
 - The stock screensaver kicks in after ~10 min idle and turns Wi-Fi off, dropping SSH.
 - `curl` on this firmware has no `file://` support; busybox `wget` doesn't verify certificates.
 - `pgrep -f` over SSH matches the SSH command itself. Use the pid file.
+- The PW3 panel is natively landscape: upright portrait is `fb0/rotate` = 3, so 180° is 1, not 2
+  (2 turns the screen 90°). The value resets on reboot.
 
 ## Credits
 

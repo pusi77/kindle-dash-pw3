@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional `ROTATE=180` in `local/env.sh` for an upside-down mounted Kindle: rotates everything
+  `dash.sh` draws (dashboard, test card, sleep screen) via `fb0/rotate`, in both the loop and
+  `dash.sh once`, and restores the upright stock UI on exit. Unset or 0: unchanged behaviour.
+
 ## [pw3-v0.2.0] - 2026-10-25
 
 ### Added
