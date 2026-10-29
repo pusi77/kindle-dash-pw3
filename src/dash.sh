@@ -33,10 +33,34 @@ RTC=${RTC:-/sys/class/rtc/rtc1/wakealarm}
 GOVERNOR=/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 # flIntensity 0 still leaves the LED at raw 1/4095; only the driver goes to a true 0.
 BACKLIGHT=/sys/class/backlight/max77696-bl/brightness
+# PW3 panel is natively landscape: the upright portrait UI is rotate=3, upside down is 1.
+FB_ROTATE=/sys/class/graphics/fb0/rotate
+ROTATE=${ROTATE:-0}
 
 num_refresh=0
 
 log() { echo "$(date -u '+%F %T') $*"; }
+
+# ROTATE=180: turn the framebuffer upside down for eips. Absolute value, not old+2, so a leftover
+# rotation from a crashed run doesn't cancel out.
+rotate_on() {
+  case $ROTATE in
+  0) return ;;
+  180) ;;
+  *)
+    log "Unsupported ROTATE='$ROTATE' (use 0 or 180), not rotating"
+    return
+    ;;
+  esac
+  old_rotate=$(cat "$FB_ROTATE")
+  # 1 here is our own leftover (USB Drive Mode kills the loop without cleanup): restore upright.
+  [ "$old_rotate" = 1 ] && old_rotate=3
+  echo 1 >"$FB_ROTATE"
+}
+
+rotate_off() {
+  [ -n "$old_rotate" ] && echo "$old_rotate" >"$FB_ROTATE"
+}
 
 init() {
   log "Starting dashboard with '$REFRESH_SCHEDULE' ($TIMEZONE) refresh..."
@@ -51,6 +75,7 @@ init() {
   [ -n "$old_gov" ] && echo powersave >"$GOVERNOR"
   lipc-set-prop com.lab126.powerd preventScreenSaver 1
   lights_off
+  rotate_on
 }
 
 lights_off() {
@@ -66,6 +91,7 @@ restore_and_exit() {
   lipc-set-prop com.lab126.cmd wirelessEnable 1
   lipc-set-prop com.lab126.powerd preventScreenSaver 0
   [ -n "$old_fl" ] && lipc-set-prop com.lab126.powerd flIntensity "$old_fl"
+  rotate_off
   start framework
   exit 0
 }
@@ -208,7 +234,10 @@ main_loop() {
 
 if [ "$1" = once ]; then
   num_refresh=$FULL_DISPLAY_REFRESH_RATE
+  # Framework keeps running: rotate only for the draw, the image stays on screen after.
+  rotate_on
   refresh_dashboard
+  rotate_off
   log_cycle
   exit "$fetch_status"
 fi

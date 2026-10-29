@@ -26,3 +26,7 @@ TIMEZONE="Europe/Rome"
 
 # Partial refreshes ghost over time; full (flashing) refresh every N updates.
 FULL_DISPLAY_REFRESH_RATE=4
+
+# Kindle mounted upside down: 180 rotates everything dash.sh draws (dashboard, test card, sleep
+# screen). 0 or unset = normal. The stock UI is restored upright on exit.
+#ROTATE=180
