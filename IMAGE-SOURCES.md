@@ -32,8 +32,17 @@ The request:
 ```
 GET <DASH_URL>
 X-Kindle-Battery: 84          # battery level 0-100, use it or ignore it
+X-Kindle-Schedule: */15 7-22 * * *   # REFRESH_SCHEDULE (cron, local time)
+X-Kindle-Timezone: Europe/Rome       # TIMEZONE
+X-Kindle-Sleep-After: 960            # SLEEP_SCREEN_INTERVAL, seconds
 Authorization: Bearer <token> # only if DASH_TOKEN is set in local/env.sh
 ```
+
+The schedule headers tell a server when the next fetches will happen, so it can render the image
+right before each one instead of on its own timer. A wake-up whose next slot is more than
+`X-Kindle-Sleep-After` seconds away shows `sleeping.png` and doesn't fetch (that's how
+`ACTIVE_HOURS` works), so with the example above the fetches are 07:00, 07:15 … 22:30.
+[kindle-dash-server](https://github.com/pusi77/kindle-dash-server) uses them.
 
 For a server on the internet, set a token so only your Kindle gets the image:
 

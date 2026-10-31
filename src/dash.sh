@@ -27,6 +27,8 @@ TIMEZONE=${TIMEZONE:-UTC}
 FULL_DISPLAY_REFRESH_RATE=${FULL_DISPLAY_REFRESH_RATE:-0}
 # A wait longer than one interval means we're outside ACTIVE_HOURS: show sleeping.png instead.
 SLEEP_SCREEN_INTERVAL=${SLEEP_SCREEN_INTERVAL:-$((INTERVAL_MINUTES * 60 + 60))}
+# fetch-dashboard.sh runs as a child process: export the schedule so it can send it to the server.
+export REFRESH_SCHEDULE TIMEZONE SLEEP_SCREEN_INTERVAL
 WIFI_TIMEOUT=${WIFI_TIMEOUT:-30}
 # PW3: /sys/devices/platform/mxc_rtc.0 doesn't exist; max77696 RTC channel 1 (rtc0 left to powerd)
 RTC=${RTC:-/sys/class/rtc/rtc1/wakealarm}
