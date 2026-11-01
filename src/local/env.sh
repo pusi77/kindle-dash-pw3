@@ -26,3 +26,9 @@ TIMEZONE="Europe/Rome"
 
 # Partial refreshes ghost over time; full (flashing) refresh every N updates.
 FULL_DISPLAY_REFRESH_RATE=4
+
+# Let the server change the schedule above (X-Dash-Schedule response header, see
+# IMAGE-SOURCES.md). It's saved in local/schedule.override; delete that file to undo.
+#ALLOW_SERVER_SCHEDULE=true
+# Refuse server schedules that refresh more often than every N minutes.
+#SERVER_SCHEDULE_MIN_MINUTES=5

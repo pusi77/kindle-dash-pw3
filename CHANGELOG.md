@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional `ALLOW_SERVER_SCHEDULE=true`: the server can set the refresh schedule with
+  `X-Dash-Schedule` / `X-Dash-Sleep-After` response headers. Validated (5 fields, safe characters,
+  at most every `SERVER_SCHEDULE_MIN_MINUTES`, default 5), kept in `local/schedule.override`,
+  `default` reverts to `local/env.sh`. Off by default.
+
 ## [pw3-v0.3.0] - 2026-11-01
 
 ### Added
