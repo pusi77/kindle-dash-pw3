@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [pw3-v0.3.0] - 2026-11-01
+
 ### Added
 - `X-Kindle-Schedule`, `X-Kindle-Timezone` and `X-Kindle-Sleep-After` request headers with the
   refresh schedule, so a server can render right before each fetch (see `IMAGE-SOURCES.md`).
