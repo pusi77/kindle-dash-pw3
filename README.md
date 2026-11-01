@@ -90,7 +90,12 @@ INTERVAL_MINUTES=15        # must divide 60, or be 60
 ACTIVE_HOURS="7-22"        # local hours that refresh (cron hour field); outside: sleep screen until morning
 TIMEZONE="Europe/Rome"     # the device clock stays UTC
 #REFRESH_SCHEDULE="*/30 7-22 * * MON-FRI"   # full cron override
+#ALLOW_SERVER_SCHEDULE=true                  # let the server change the schedule
 ```
+
+With `ALLOW_SERVER_SCHEDULE=true` a server can set the schedule from its own UI (e.g.
+[kindle-dash-server](https://github.com/pusi77/kindle-dash-server)); see
+[IMAGE-SOURCES.md](./IMAGE-SOURCES.md#letting-the-server-set-the-schedule-optional).
 
 ## Stop / recover
 

@@ -27,6 +27,17 @@ TIMEZONE=${TIMEZONE:-UTC}
 FULL_DISPLAY_REFRESH_RATE=${FULL_DISPLAY_REFRESH_RATE:-0}
 # A wait longer than one interval means we're outside ACTIVE_HOURS: show sleeping.png instead.
 SLEEP_SCREEN_INTERVAL=${SLEEP_SCREEN_INTERVAL:-$((INTERVAL_MINUTES * 60 + 60))}
+# Optional: let the server set the schedule (X-Dash-Schedule / X-Dash-Sleep-After response
+# headers, see IMAGE-SOURCES.md). The last one received is kept in local/schedule.override.
+ALLOW_SERVER_SCHEDULE=${ALLOW_SERVER_SCHEDULE:-false}
+SERVER_SCHEDULE_MIN_MINUTES=${SERVER_SCHEDULE_MIN_MINUTES:-5}
+SCHEDULE_OVERRIDE="$DIR/local/schedule.override"
+ENV_REFRESH_SCHEDULE=$REFRESH_SCHEDULE
+ENV_SLEEP_SCREEN_INTERVAL=$SLEEP_SCREEN_INTERVAL
+if [ "$ALLOW_SERVER_SCHEDULE" = true ] && [ -f "$SCHEDULE_OVERRIDE" ]; then
+  # shellcheck source=/dev/null  # written by apply_server_schedule, validated before writing
+  . "$SCHEDULE_OVERRIDE"
+fi
 # fetch-dashboard.sh runs as a child process: export the schedule so it can send it to the server.
 export REFRESH_SCHEDULE TIMEZONE SLEEP_SCREEN_INTERVAL
 WIFI_TIMEOUT=${WIFI_TIMEOUT:-30}
@@ -101,6 +112,86 @@ prepare_sleep() {
   num_refresh=$FULL_DISPLAY_REFRESH_RATE
 }
 
+# Value of a response header saved by curl -D (last one wins, e.g. after redirects).
+header_value() {
+  grep -i "^$2:" "$1" 2>/dev/null | tail -n 1 | cut -d: -f2- | tr -d '\r' | sed 's/^ *//;s/ *$//'
+}
+
+# Minute field accepted from a server: "*/N" with N >= SERVER_SCHEDULE_MIN_MINUTES, or a list of
+# at most 60/SERVER_SCHEDULE_MIN_MINUTES plain minutes. Anything denser could drain the battery.
+minute_field_ok() {
+  case $1 in
+  "*/"*)
+    n=${1#"*/"}
+    case $n in '' | *[!0-9]*) return 1 ;; esac
+    [ "$n" -ge "$SERVER_SCHEDULE_MIN_MINUTES" ]
+    ;;
+  '' | *[!0-9,]*) return 1 ;;
+  *)
+    [ "$(echo "$1" | tr ',' '\n' | grep -c .)" -le $((60 / SERVER_SCHEDULE_MIN_MINUTES)) ]
+    ;;
+  esac
+}
+
+# Take the schedule from the server's X-Dash-Schedule / X-Dash-Sleep-After response headers, if
+# ALLOW_SERVER_SCHEDULE=true. "X-Dash-Schedule: default" goes back to env.sh. Invalid values are
+# logged and ignored. Applies from the next sleep (main_loop recomputes the wake-up after this).
+apply_server_schedule() {
+  headers=$1
+  [ "$ALLOW_SERVER_SCHEDULE" = true ] && [ -f "$headers" ] || return 0
+  schedule=$(header_value "$headers" X-Dash-Schedule)
+  [ -n "$schedule" ] || return 0
+  if [ "$schedule" = default ]; then
+    [ -f "$SCHEDULE_OVERRIDE" ] || return 0
+    rm -f "$SCHEDULE_OVERRIDE"
+    REFRESH_SCHEDULE=$ENV_REFRESH_SCHEDULE
+    SLEEP_SCREEN_INTERVAL=$ENV_SLEEP_SCREEN_INTERVAL
+    log "Server schedule removed, back to env.sh: '$REFRESH_SCHEDULE'"
+    return 0
+  fi
+  sleep_after=$(header_value "$headers" X-Dash-Sleep-After)
+  [ "$schedule" = "$REFRESH_SCHEDULE" ] && [ "$sleep_after" = "$SLEEP_SCREEN_INTERVAL" ] && return 0
+
+  # Strict whitelist: the values end up in a file that is sourced.
+  case $schedule in
+  *[!0-9A-Za-z*/,\ -]*)
+    log "Ignoring server schedule: invalid characters"
+    return 0
+    ;;
+  esac
+  case $sleep_after in
+  '' | *[!0-9]*)
+    log "Ignoring server schedule '$schedule': X-Dash-Sleep-After must be a number"
+    return 0
+    ;;
+  esac
+  if [ "$sleep_after" -lt 60 ]; then
+    log "Ignoring server schedule '$schedule': X-Dash-Sleep-After below 60 s"
+    return 0
+  fi
+  if [ "$(echo "$schedule" | awk '{print NF}')" -ne 5 ]; then
+    log "Ignoring server schedule '$schedule': expected 5 fields"
+    return 0
+  fi
+  if ! minute_field_ok "$(echo "$schedule" | awk '{print $1}')"; then
+    log "Ignoring server schedule '$schedule': more often than every $SERVER_SCHEDULE_MIN_MINUTES min"
+    return 0
+  fi
+  s=$("$DIR/next-wakeup" --schedule="$schedule" --timezone="$TIMEZONE" 2>/dev/null)
+  case $s in
+  '' | *[!0-9]*)
+    log "Ignoring server schedule '$schedule': not a valid cron schedule"
+    return 0
+    ;;
+  esac
+
+  printf "REFRESH_SCHEDULE='%s'\nSLEEP_SCREEN_INTERVAL=%s\n" "$schedule" "$sleep_after" \
+    >"$SCHEDULE_OVERRIDE.tmp" && mv "$SCHEDULE_OVERRIDE.tmp" "$SCHEDULE_OVERRIDE"
+  REFRESH_SCHEDULE=$schedule
+  SLEEP_SCREEN_INTERVAL=$sleep_after
+  log "Server schedule applied: '$REFRESH_SCHEDULE', sleep screen after ${SLEEP_SCREEN_INTERVAL}s"
+}
+
 # Wi-Fi on, fetch, draw. Wi-Fi is left on: the caller turns it off after the abort window.
 refresh_dashboard() {
   log "Refreshing dashboard"
@@ -112,9 +203,12 @@ refresh_dashboard() {
   fi
 
   if [ "$fetch_status" -ne 0 ]; then
+    rm -f "$DASH_PNG.tmp.headers"
     log "Not updating screen, fetch-dashboard returned $fetch_status"
     return 1
   fi
+  apply_server_schedule "$DASH_PNG.tmp.headers"
+  rm -f "$DASH_PNG.tmp.headers"
   mv "$DASH_PNG.tmp" "$DASH_PNG"
 
   if [ "$num_refresh" -eq "$FULL_DISPLAY_REFRESH_RATE" ]; then

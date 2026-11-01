@@ -7,8 +7,10 @@ case "$DASH_URL" in
 esac
 
 # X-Kindle-Schedule/-Timezone/-Sleep-After let a server render only right before each refresh.
+# The response headers go to "$OUT.headers": dash.sh reads X-Dash-Schedule from there (only with
+# ALLOW_SERVER_SCHEDULE=true).
 fetch() {
-  curl -sSf --max-time 30 --retry 3 --retry-delay 2 \
+  curl -sSf --max-time 30 --retry 3 --retry-delay 2 -D "$OUT.headers" \
     -H "X-Kindle-Battery: $(gasgauge-info -s)" \
     -H "X-Kindle-Schedule: $REFRESH_SCHEDULE" \
     -H "X-Kindle-Timezone: $TIMEZONE" \

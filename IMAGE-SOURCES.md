@@ -44,6 +44,30 @@ right before each one instead of on its own timer. A wake-up whose next slot is 
 `ACTIVE_HOURS` works), so with the example above the fetches are 07:00, 07:15 … 22:30.
 [kindle-dash-server](https://github.com/pusi77/kindle-dash-server) uses them.
 
+#### Letting the server set the schedule (optional)
+
+With `ALLOW_SERVER_SCHEDULE=true` in `local/env.sh`, the server can change the refresh schedule
+by answering the image request with two headers:
+
+```
+X-Dash-Schedule: */30 6-21 * * *     # becomes REFRESH_SCHEDULE (cron, in TIMEZONE)
+X-Dash-Sleep-After: 1860             # becomes SLEEP_SCREEN_INTERVAL, seconds
+```
+
+The new schedule is used from the very next sleep, kept in `local/schedule.override` (so it
+survives restarts), and reported back in `X-Kindle-Schedule` with the next request.
+`X-Dash-Schedule: default` deletes the override and goes back to `local/env.sh`. Off by default:
+without `ALLOW_SERVER_SCHEDULE=true` these headers are ignored.
+
+A schedule from the server is checked before it's used, and logged and ignored if it fails:
+
+- exactly 5 cron fields, only letters, digits and `* / , -`, and `next-wakeup` must accept it;
+- at most one refresh every `SERVER_SCHEDULE_MIN_MINUTES` (default 5): the minute field must be
+  `*/N` with N at least that, or a list of at most 60/N minutes;
+- `X-Dash-Sleep-After` a number, at least 60.
+
+To undo it by hand, delete `dashboard/local/schedule.override` (USB or SSH) and restart.
+
 For a server on the internet, set a token so only your Kindle gets the image:
 
 ```sh
