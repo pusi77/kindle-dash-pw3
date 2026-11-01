@@ -6,9 +6,13 @@ case "$DASH_URL" in
 /*) exec cp "$DASH_URL" "$OUT" ;;
 esac
 
+# X-Kindle-Schedule/-Timezone/-Sleep-After let a server render only right before each refresh.
 fetch() {
   curl -sSf --max-time 30 --retry 3 --retry-delay 2 \
     -H "X-Kindle-Battery: $(gasgauge-info -s)" \
+    -H "X-Kindle-Schedule: $REFRESH_SCHEDULE" \
+    -H "X-Kindle-Timezone: $TIMEZONE" \
+    -H "X-Kindle-Sleep-After: $SLEEP_SCREEN_INTERVAL" \
     "$@" -o "$OUT" "$DASH_URL"
 }
 
